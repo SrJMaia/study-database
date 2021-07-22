@@ -1,0 +1,148 @@
+SOURCE: https://www.programmersought.com/article/13031871878/
+
+package main
+ 
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+	"time"
+)
+ 
+var Db *sqlx.DB
+//Connect to the database 
+func init(){
+	var err error
+	 //Db, err := sqlx.Open("database type", "username: password@tcp(address:port)/databasename?charset=encoding")
+	Db, err = sqlx.Open("mysql", "root:123456@tcp(127.0.0.1:3306)/test?charset=utf8mb4")
+	if err != nil {
+		panic(err)
+	}
+}
+ 
+type Member struct {
+	Username string `db:"username"`
+	Money float64   `db:"money"`
+	Birthday sql.NullString `db:"birthday"`
+}
+ 
+func Select(){
+	 //Check one
+	var info Member
+	err:=Db.Get(&info,"SELECT username,money,birthday FROM member WHERE id=?",1)
+	if err!=nil {
+		fmt.Println(err);return
+	}
+	fmt.Println(info)
+ 
+	 / / Query multiple
+	var list []Member
+	err=Db.Select(&list,"SELECT username,money,birthday FROM member")
+	if err != nil {
+		fmt.Println(err);return
+	}
+	fmt.Println(list)
+}
+ 
+func Insert(){
+	result,err:=Db.Exec("INSERT INTO member(username,money,created_at)VALUES (?,?,?)","test",20,time.Now().Unix())
+	if err != nil {
+		fmt.Println(err);return
+	}
+	id,err:=result.LastInsertId()
+	if err != nil {
+		fmt.Println(err);return
+	}
+	fmt.Println(id)
+}
+ 
+func Update(){
+	result,err:=Db.Exec("UPDATE member SET money=money+3 WHERE id=?",1)
+	if err != nil {
+		fmt.Println(err);return
+	}
+	rows,err:=result.RowsAffected()
+	if err != nil {
+		fmt.Println(err);return
+	}
+	fmt.Println(rows)
+}
+ 
+func Delete(){
+	result,err:=Db.Exec("DELETE FROM member WHERE id=?",7)
+	if err != nil {
+		fmt.Println(err);return
+	}
+	rows,err:=result.RowsAffected()
+	if err != nil {
+		fmt.Println(err);return
+	}
+	fmt.Println(rows)
+}
+ 
+func Transaction(){
+	db,err:=Db.Begin()
+	if err!=nil {
+		fmt.Println(err);return
+	}
+	 Defer clearTransaction (db) / / If there is an exception, resulting in no commit and rollback, can be used to close
+ 
+	//1、
+	result,err:=db.Exec("UPDATE member SET money=money+3 WHERE id=?",1)
+	if err!=nil {
+		fmt.Println(err);return
+	}
+	num,err:=result.RowsAffected()
+	if err != nil {
+		db.Rollback()
+		fmt.Println(err);return
+	}
+	fmt.Println(num)
+ 
+	//2、
+	result,err=db.Exec("UPDATE member SET money=money-3 WHERE id=?",2)
+	if err!=nil {
+		db.Rollback()
+		fmt.Println(err);return
+	}
+	num,err=result.RowsAffected()
+	if err != nil {
+		db.Rollback()
+		fmt.Println(err);return
+	}
+	db.Commit()
+}
+ 
+ 
+ / / transaction rollback
+func clearTransaction(tx *sql.Tx){
+	 fmt.Println("here is responsible for closing, rollback")
+	err := tx.Rollback()
+	if err != sql.ErrTxDone && err != nil{
+		fmt.Println(err)
+	}
+}
+ 
+ 
+func main() {
+	//Select()
+	//Insert()
+	//Update()
+	//Delete()
+ 
+	//Transaction()
+}
+
+CREATE TABLE `member` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `money` decimal(10,2) unsigned NOT NULL,
+  `birthday` date DEFAULT NULL,
+  `created_at` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+ ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='User Table';
+ 
+INSERT INTO `test`.`member` (`id`, `username`, `money`, `birthday`, `created_at`) VALUES ('1', 'mrtwenty', '130.00', '2019-06-19', '1223');
+ 
+INSERT INTO `test`.`member` (`id`, `username`, `money`, `birthday`, `created_at`) VALUES ('2', 'zhao', '80.00', NULL, '2323');
