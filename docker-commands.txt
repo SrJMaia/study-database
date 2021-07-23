@@ -1,0 +1,12 @@
+docker-compose up -d
+docker-compose down
+
+1 Entrar no docker
+2 docker ps
+3 pegar o nome do docker ativo
+4 docker exec -it nome bash
+
+Backup:
+sudo docker exec -i <CONTAINER_ID> mysqldump -u <DATABASE_USERNAME> -p --databases <DATABASE_NAME> > yourbackup.sql
+Restore
+docker exec -i <CONTAINER_ID> mysql -u <DATABASE_USERNAME> --password=<DATABASE_PASSWORD> <DATABASE_NAME> < FILENAME.SQL
